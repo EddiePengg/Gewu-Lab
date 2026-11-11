@@ -1,3 +1,5 @@
+import { setupAIMultilineInput } from "./aiMultilineInput";
+
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
@@ -11,6 +13,7 @@ function fileAsDataUrl(file: File) {
 }
 
 export function setupAIImageInput(root: HTMLElement, onError: (message: string) => void) {
+  const multilineInput = setupAIMultilineInput(root);
   let pendingImage: string | null = null;
 
   function clearAttachment() {
@@ -43,9 +46,10 @@ export function setupAIImageInput(root: HTMLElement, onError: (message: string) 
       const dataUrl = await fileAsDataUrl(file);
       pendingImage = dataUrl;
       showAttachment(palette, dataUrl);
-      const input = palette.querySelector<HTMLInputElement>(".ai-instruction-input-field");
+      const input = palette.querySelector<HTMLInputElement | HTMLTextAreaElement>(".ai-instruction-input-field:not([aria-hidden='true'])");
       if (input && !input.value.trim()) {
-        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+        const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
         setter?.call(input, "识别图片并转换为 Markdown 和 LaTeX");
         input.dispatchEvent(new Event("input", { bubbles: true }));
       }
@@ -108,6 +112,7 @@ export function setupAIImageInput(root: HTMLElement, onError: (message: string) 
     },
     destroy: () => {
       clearAttachment();
+      multilineInput.destroy();
       observer.disconnect();
       document.removeEventListener("paste", onPaste, true);
       document.removeEventListener("dragover", onDragOver, true);

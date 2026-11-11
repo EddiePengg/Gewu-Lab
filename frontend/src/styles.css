@@ -331,6 +331,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .logout-button { display: grid; place-items: center; flex-shrink: 0; margin-left: auto; padding: 3px; color: #92929b; background: none; border: 0; border-radius: 5px; }
 .logout-button:hover { color: var(--purple); background: #e4e6f1; }
 
+.milkdown .ai-instruction-textarea { min-height: 28px; max-height: 140px; resize: none; overflow-y: auto; }
 .milkdown .ai-image-attachment { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 6px 8px; color: #6d6e78; background: #f2f3f8; border: 1px solid #e2e4ef; border-radius: 8px; font-size: 11px; }
 .milkdown .ai-image-attachment img { width: 34px; height: 34px; object-fit: cover; border-radius: 5px; }
 .milkdown .ai-image-attachment span { flex: 1; }

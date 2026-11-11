@@ -79,7 +79,7 @@ export function MarkdownEditor({ value, onChange, onError }: Props) {
             if (finalChunk) yield finalChunk;
           },
           diffReviewOnEnd: true,
-          instructionPlaceholder: "输入指令，或直接粘贴图片…",
+          instructionPlaceholder: "输入指令，Enter 换行，⌘/Ctrl+Enter 发送，可粘贴图片…",
           suggestionsHeaderLabel: "常用操作",
           sendAsPromptHeaderLabel: "自定义指令",
           sendAsPromptLabel: "询问 AI：",
