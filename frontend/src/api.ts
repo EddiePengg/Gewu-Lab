@@ -1,9 +1,30 @@
 import type { Card, CardInput, Workspace } from "./types";
 
-const API_URL = import.meta.env.VITE_API_URL || "/api";
+export const API_URL = import.meta.env.VITE_API_URL || "/api";
+const TOKEN_KEY = "gewu-api-token";
+
+export function getApiToken() {
+  return localStorage.getItem(TOKEN_KEY) || "";
+}
+
+export function clearApiToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+export async function authorizedFetch(input: string, options: RequestInit = {}) {
+  const headers = new Headers(options.headers);
+  const token = getApiToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const response = await fetch(input, { ...options, headers });
+  if (response.status === 401) {
+    clearApiToken();
+    window.dispatchEvent(new Event("gewu:unauthorized"));
+  }
+  return response;
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await authorizedFetch(`${API_URL}${path}`, {
     ...options,
     headers: { "Content-Type": "application/json", ...options?.headers },
   });
@@ -13,6 +34,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
   if (response.status === 204) return undefined as T;
   return response.json();
+}
+
+export async function authenticate(token: string) {
+  localStorage.setItem(TOKEN_KEY, token);
+  try {
+    await request<Workspace[]>("/workspaces");
+  } catch (error) {
+    clearApiToken();
+    throw error;
+  }
 }
 
 export const api = {

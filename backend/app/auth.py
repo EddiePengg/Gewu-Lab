@@ -7,7 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from .config import settings
 
 
-bearer_scheme = HTTPBearer(auto_error=False, description="AI 与外部 API 客户端使用 Bearer Token")
+bearer_scheme = HTTPBearer(auto_error=False, description="网页、AI 与 API 客户端使用同一个 Bearer Token")
 
 
 def require_bearer(credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme)):

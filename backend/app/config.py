@@ -11,8 +11,7 @@ class Settings(BaseSettings):
     ai_base_url: str = "https://aiping.cn/api/v1"
     ai_model: str = "Qwen3.5-35B-A3B"
     asset_dir: str = str(Path(__file__).resolve().parents[2] / "instance" / "assets")
-    api_token: str = Field(default="gewu-local-token", validation_alias="GEWU_API_TOKEN")
-    cookie_secure: bool = False
+    api_token: str = Field(default="gewulab233", validation_alias="GEWU_API_TOKEN")
     static_dir: str = str(Path(__file__).resolve().parents[2] / "frontend" / "dist")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

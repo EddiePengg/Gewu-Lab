@@ -12,14 +12,13 @@
 - AI 对话框支持粘贴或拖入图片，识别为 Markdown/LaTeX
 - 标签、搜索、创建时间、修改时间和上次查看时间
 - 图片附件持久化
-- 面向 AI/外部程序的 Bearer Token API 与 OpenAPI 文档
+- 网页、AI 与外部程序共用的 Bearer Token API 与 OpenAPI 文档
 
 ## 技术栈
 
 - 前端：React、TypeScript、Vite、Milkdown Crepe、KaTeX
 - 后端：Python、FastAPI、SQLAlchemy、Alembic
-- 本地开发数据库：SQLite
-- Docker 部署数据库：PostgreSQL
+- 数据库：SQLite，可切换 PostgreSQL
 - AI：OpenAI 兼容接口，默认使用 AiPing 与 `Qwen3.5-35B-A3B`
 
 ## 单容器 Docker 部署
@@ -35,7 +34,7 @@ docker run -p 8000:8000 \
   gewu-lab
 ```
 
-访问 http://localhost:8000。单容器模式默认使用 `/data/gewu.db` 的 SQLite；也可以通过 `DATABASE_URL` 连接外部 PostgreSQL。
+访问 http://localhost:8000，输入 `GEWU_API_TOKEN` 登录。单容器模式默认使用 `/data/gewu.db` 的 SQLite；也可以通过 `DATABASE_URL` 连接外部 PostgreSQL。
 
 ## Docker Compose 启动
 
@@ -48,7 +47,7 @@ cp .env.example .env
 编辑 `.env`，至少设置：
 
 ```bash
-GEWU_API_TOKEN=用于外部API的随机长令牌
+GEWU_API_TOKEN=网页和API共用的随机长令牌
 AI_API_KEY=AI服务密钥
 AI_BASE_URL=https://aiping.cn/api/v1
 AI_MODEL=Qwen3.5-35B-A3B
@@ -78,7 +77,7 @@ cd backend
 mkdir -p ../instance
 DATABASE_URL=sqlite:///../instance/gewu.db ../.venv/bin/alembic upgrade head
 DATABASE_URL=sqlite:///../instance/gewu.db \
-GEWU_API_TOKEN=gewu-local-token \
+GEWU_API_TOKEN=gewulab233 \
 AI_API_KEY=你的AI服务密钥 \
 ../.venv/bin/uvicorn app.main:app --reload --port 8000
 ```
@@ -91,29 +90,31 @@ npm ci
 npm run dev
 ```
 
-访问 http://localhost:5173。网页端无需登录。
+访问 http://localhost:5173，输入 `GEWU_API_TOKEN` 登录。本机示例令牌为 `gewulab233`。
 
 ## API
 
-网页内部接口使用 `/api`，AI 和外部客户端使用带鉴权的 `/api/v1`。
+网页、AI 和外部客户端统一使用 `/api`，并通过 `Authorization: Bearer <GEWU_API_TOKEN>` 鉴权。健康检查、API 文档和已上传图片的读取不需要 Token。
 
 ```bash
-curl http://localhost:8000/api/v1/workspaces \
+curl http://localhost:8000/api/workspaces \
   -H "Authorization: Bearer $GEWU_API_TOKEN"
 ```
+
+API 文档位于 `/api/docs`，OpenAPI JSON 位于 `/api/openapi.json`。
 
 主要接口：
 
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
-| GET | `/api/v1/workspaces` | 获取 Workspace |
-| POST | `/api/v1/workspaces` | 创建 Workspace |
-| GET | `/api/v1/workspaces/{id}/cards` | 获取或搜索卡片 |
-| POST | `/api/v1/workspaces/{id}/cards` | 创建 Markdown 卡片 |
-| GET | `/api/v1/cards/{id}` | 只读获取卡片，不记录查看 |
-| PATCH | `/api/v1/cards/{id}` | 修改卡片 Markdown 与标签 |
-| DELETE | `/api/v1/cards/{id}` | 删除卡片 |
-| POST | `/api/v1/cards/{id}/view` | 显式记录网页查看 |
+| GET | `/api/workspaces` | 获取 Workspace |
+| POST | `/api/workspaces` | 创建 Workspace |
+| GET | `/api/workspaces/{id}/cards` | 获取或搜索卡片 |
+| POST | `/api/workspaces/{id}/cards` | 创建 Markdown 卡片 |
+| GET | `/api/cards/{id}` | 只读获取卡片，不记录查看 |
+| PATCH | `/api/cards/{id}` | 修改卡片 Markdown 与标签 |
+| DELETE | `/api/cards/{id}` | 删除卡片 |
+| POST | `/api/cards/{id}/view` | 显式记录网页查看 |
 
 卡片正文使用 Markdown，可直接包含 `$...$` 行内公式和多行 `$$` 独立公式。
 
@@ -132,5 +133,6 @@ backend/
   alembic/             数据库迁移
 frontend/
   src/                 React 页面与 Milkdown 编辑器
+notebooks/             可选的 Jupyter 交互实验
 compose.yaml           PostgreSQL、后端和前端容器编排
 ```

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-labelledby="title">
+  <title id="title">格物 Lab</title>
+  <defs>
+    <linearGradient id="background" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#343741"/>
+      <stop offset="1" stop-color="#202128"/>
+    </linearGradient>
+    <linearGradient id="discovery" x1="25" y1="25" x2="37" y2="37" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#94A2F2"/>
+      <stop offset="1" stop-color="#6979DB"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="44" height="44" rx="13" fill="url(#background)"/>
+  <rect x="11" y="11" width="10" height="10" rx="3" fill="#F7F7FB"/>
+  <rect x="25" y="11" width="10" height="10" rx="3" fill="#C9CFEF"/>
+  <rect x="11" y="25" width="10" height="10" rx="3" fill="#E3E5F2"/>
+  <rect x="25" y="25" width="10" height="10" rx="3" fill="url(#discovery)"/>
+  <path d="M30 26.8c.35 2.15 1.05 2.85 3.2 3.2-2.15.35-2.85 1.05-3.2 3.2-.35-2.15-1.05-2.85-3.2-3.2 2.15-.35 2.85-1.05 3.2-3.2Z" fill="#FFFFFF"/>
+</svg>

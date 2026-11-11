@@ -12,7 +12,7 @@ export function CardEditor() {
   const { refreshWorkspaces } = useApp();
   const editing = Boolean(cardId);
   const [resolvedWorkspaceId, setResolvedWorkspaceId] = useState(Number(workspaceId));
-  const [content, setContent] = useState("# ");
+  const [content, setContent] = useState("");
   const [tags, setTags] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(editing);

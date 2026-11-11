@@ -2,9 +2,10 @@ import re
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
+from ..auth import require_bearer
 from ..config import settings
 
 
@@ -14,7 +15,7 @@ ASSET_NAME = re.compile(r"^[0-9a-f]{32}\.(png|jpg|webp)$")
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, dependencies=[Depends(require_bearer)])
 async def upload_asset(file: UploadFile = File(...)):
     extension = EXTENSIONS.get(file.content_type or "")
     if not extension:

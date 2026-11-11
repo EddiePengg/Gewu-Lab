@@ -3,10 +3,9 @@ import { Crepe } from "@milkdown/crepe";
 import { defaultAIIcon, useAIInstructionTooltipAPI } from "@milkdown/crepe/feature/ai";
 import { editorViewCtx } from "@milkdown/kit/core";
 import { setupAIImageInput } from "./aiImageInput";
+import { API_URL, authorizedFetch } from "./api";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
-
-const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 interface Props {
   value: string;
@@ -17,7 +16,7 @@ interface Props {
 async function uploadImage(file: File) {
   const body = new FormData();
   body.append("file", file);
-  const response = await fetch(`${API_URL}/assets`, { method: "POST", body });
+  const response = await authorizedFetch(`${API_URL}/assets`, { method: "POST", body });
   if (!response.ok) throw new Error("图片上传失败");
   return (await response.json() as { url: string }).url;
 }
@@ -58,7 +57,7 @@ export function MarkdownEditor({ value, onChange, onError }: Props) {
         [Crepe.Feature.AI]: {
           provider: async function* (context, signal) {
             const image = imageInput.consumeImage();
-            const response = await fetch(`${API_URL}/ai/edit`, {
+            const response = await authorizedFetch(`${API_URL}/ai/edit`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ ...context, image }),

@@ -36,15 +36,11 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 }
 .brand { display: flex; align-items: center; gap: 11px; padding: 0 10px; margin-bottom: 42px; }
 .brand-mark {
-  display: grid;
-  place-items: center;
+  display: block;
   width: 35px;
   height: 35px;
-  color: white;
-  background: var(--ink);
+  flex-shrink: 0;
   border-radius: 10px;
-  font-size: 18px;
-  font-weight: 600;
   box-shadow: 0 4px 10px #282a3020;
 }
 .brand-name { font-size: 20px; font-weight: 600; letter-spacing: -.4px; }
@@ -330,6 +326,10 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .login-card input:focus { border-color: #aeb7e4; box-shadow: 0 0 0 3px #6575d80c; }
 .login-card .primary-button { align-self: flex-end; margin-top: 22px; }
 .login-card .form-error { margin: 12px 0 -10px; }
+.login-card > .brand-mark { width: 48px; height: 48px; border-radius: 14px; }
+.login-card label { margin-bottom: 9px; }
+.logout-button { display: grid; place-items: center; flex-shrink: 0; margin-left: auto; padding: 3px; color: #92929b; background: none; border: 0; border-radius: 5px; }
+.logout-button:hover { color: var(--purple); background: #e4e6f1; }
 
 .milkdown .ai-image-attachment { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 6px 8px; color: #6d6e78; background: #f2f3f8; border: 1px solid #e2e4ef; border-radius: 8px; font-size: 11px; }
 .milkdown .ai-image-attachment img { width: 34px; height: 34px; object-fit: cover; border-radius: 5px; }
