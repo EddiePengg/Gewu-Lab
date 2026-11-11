@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gewu
+      POSTGRES_USER: gewu
+      POSTGRES_PASSWORD: gewu
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gewu -d gewu"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://gewu:gewu@db:5432/gewu
+      CORS_ORIGINS: http://localhost:3000
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_BASE_URL: ${AI_BASE_URL:-https://aiping.cn/api/v1}
+      AI_MODEL: ${AI_MODEL:-Qwen3.5-35B-A3B}
+      ASSET_DIR: /data/assets
+      GEWU_API_TOKEN: ${GEWU_API_TOKEN:?Please set GEWU_API_TOKEN}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - asset_data:/data/assets
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres_data:
+  asset_data:
