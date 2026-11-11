@@ -22,9 +22,24 @@
 - Docker 部署数据库：PostgreSQL
 - AI：OpenAI 兼容接口，默认使用 AiPing 与 `Qwen3.5-35B-A3B`
 
-## Docker 启动
+## 单容器 Docker 部署
 
-要求 Docker Compose。
+根目录 `Dockerfile` 适用于只支持单 Dockerfile 的部署平台。它会构建前端，并由 FastAPI 同时提供网页和 API。
+
+```bash
+docker build -t gewu-lab .
+docker run -p 8000:8000 \
+  -e GEWU_API_TOKEN=随机长令牌 \
+  -e AI_API_KEY=AI服务密钥 \
+  -v gewu_data:/data \
+  gewu-lab
+```
+
+访问 http://localhost:8000。单容器模式默认使用 `/data/gewu.db` 的 SQLite；也可以通过 `DATABASE_URL` 连接外部 PostgreSQL。
+
+## Docker Compose 启动
+
+Compose 模式使用独立的 PostgreSQL、FastAPI 和 Nginx 容器，要求 Docker Compose。
 
 ```bash
 cp .env.example .env

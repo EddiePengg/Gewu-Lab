@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     asset_dir: str = str(Path(__file__).resolve().parents[2] / "instance" / "assets")
     api_token: str = Field(default="gewu-local-token", validation_alias="GEWU_API_TOKEN")
     cookie_secure: bool = False
+    static_dir: str = str(Path(__file__).resolve().parents[2] / "frontend" / "dist")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

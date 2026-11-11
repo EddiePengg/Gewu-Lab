@@ -1,0 +1,10 @@
+.git
+.gitignore
+.venv
+.tools
+.env
+instance
+node_modules
+dist
+*.tsbuildinfo
+.DS_Store

@@ -1,5 +1,9 @@
-from fastapi import Depends, FastAPI
+from pathlib import Path
+
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from .auth import require_bearer
@@ -34,3 +38,14 @@ def health():
     with SessionLocal() as db:
         db.execute(text("SELECT 1"))
     return {"status": "ok"}
+
+
+static_dir = Path(settings.static_dir)
+if (static_dir / "index.html").is_file():
+    app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="static-assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def serve_frontend(path: str):
+        if path == "api" or path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not found")
+        return FileResponse(static_dir / "index.html")
