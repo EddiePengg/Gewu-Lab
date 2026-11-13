@@ -1,9 +1,11 @@
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { Crepe } from "@milkdown/crepe";
-import { defaultAIIcon, useAIInstructionTooltipAPI } from "@milkdown/crepe/feature/ai";
-import { editorViewCtx } from "@milkdown/kit/core";
-import { setupAIImageInput } from "./aiImageInput";
+import { editorViewCtx, serializerCtx } from "@milkdown/kit/core";
+import { keymap } from "@milkdown/kit/prose/keymap";
+import { Plugin, TextSelection } from "@milkdown/kit/prose/state";
+import { $prose, insert } from "@milkdown/kit/utils";
 import { API_URL, authorizedFetch } from "./api";
+import { normalizeMathDelimiters } from "./mathDelimiters";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
 
@@ -11,6 +13,12 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   onError: (message: string) => void;
+  onSelectionChange: (selection: string) => void;
+}
+
+export interface MarkdownEditorHandle {
+  getMarkdown: () => string | undefined;
+  applyMarkdown: (markdown: string) => void;
 }
 
 async function uploadImage(file: File) {
@@ -21,78 +29,83 @@ async function uploadImage(file: File) {
   return (await response.json() as { url: string }).url;
 }
 
-export function MarkdownEditor({ value, onChange, onError }: Props) {
+const emptyHeadingBackspace = $prose(() => keymap({
+  Backspace: (state, dispatch) => {
+    const { selection } = state;
+    if (!(selection instanceof TextSelection) || !selection.empty) return false;
+    const { $from } = selection;
+    if ($from.parentOffset !== 0 || $from.parent.type.name !== "heading" || $from.parent.content.size !== 0) return false;
+
+    const from = $from.before();
+    if ($from.depth === 1 && state.doc.childCount === 1) {
+      dispatch?.(state.tr.setNodeMarkup(from, state.schema.nodes.paragraph));
+    } else {
+      dispatch?.(state.tr.delete(from, $from.after()));
+    }
+    return true;
+  },
+}));
+
+export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function MarkdownEditor({ value, onChange, onError, onSelectionChange }, ref) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const crepeRef = useRef<Crepe>(null);
   const onChangeRef = useRef(onChange);
   const onErrorRef = useRef(onError);
+  const onSelectionChangeRef = useRef(onSelectionChange);
   onChangeRef.current = onChange;
   onErrorRef.current = onError;
+  onSelectionChangeRef.current = onSelectionChange;
+  useImperativeHandle(ref, () => ({
+    getMarkdown: () => crepeRef.current?.getMarkdown(),
+    applyMarkdown: (markdown) => {
+      crepeRef.current?.editor.action(insert(normalizeMathDelimiters(markdown)));
+    },
+  }), []);
 
   useEffect(() => {
     if (!rootRef.current) return;
-    const imageInput = setupAIImageInput(rootRef.current, (message) => onErrorRef.current(message));
     const crepe = new Crepe({
       root: rootRef.current,
-      defaultValue: value,
+      defaultValue: normalizeMathDelimiters(value),
       features: {
-        [Crepe.Feature.AI]: true,
         [Crepe.Feature.TopBar]: true,
       },
       featureConfigs: {
         [Crepe.Feature.ImageBlock]: { onUpload: uploadImage },
         [Crepe.Feature.Placeholder]: { text: "开始书写，使用 / 插入内容", mode: "block" },
         [Crepe.Feature.Latex]: { katexOptions: { throwOnError: false } },
-        [Crepe.Feature.TopBar]: {
-          buildTopBar: (builder) => {
-            builder.addGroup("ai", "AI").addItem("ask-ai", {
-              icon: defaultAIIcon,
-              active: () => false,
-              onRun: (ctx) => {
-                const { from, to } = ctx.get(editorViewCtx).state.selection;
-                useAIInstructionTooltipAPI(ctx).show(from, to);
-              },
-            });
-          },
-        },
-        [Crepe.Feature.AI]: {
-          provider: async function* (context, signal) {
-            const image = imageInput.consumeImage();
-            const response = await authorizedFetch(`${API_URL}/ai/edit`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ...context, image }),
-              signal,
-            });
-            if (!response.ok) {
-              const body = await response.json().catch(() => null);
-              throw new Error(body?.detail || "AI 请求失败");
-            }
-            if (!response.body) throw new Error("AI 返回了空响应");
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            while (true) {
-              const { done, value: chunk } = await reader.read();
-              if (done) break;
-              yield decoder.decode(chunk, { stream: true });
-            }
-            const finalChunk = decoder.decode();
-            if (finalChunk) yield finalChunk;
-          },
-          diffReviewOnEnd: true,
-          instructionPlaceholder: "输入指令，Enter 换行，⌘/Ctrl+Enter 发送，可粘贴图片…",
-          suggestionsHeaderLabel: "常用操作",
-          sendAsPromptHeaderLabel: "自定义指令",
-          sendAsPromptLabel: "询问 AI：",
-          streamingIndicator: { fallbackLabel: "正在生成", cancelHint: "按 Esc 取消" },
-          diffActions: {
-            retryLabel: "重试",
-            rejectAllLabel: "拒绝",
-            acceptAllLabel: "接受",
-          },
-          onError: (error) => onErrorRef.current(error.message),
-        },
       },
     });
+    const selectionTracker = $prose((ctx) => new Plugin({
+      view: () => {
+        let previousSelection: string | undefined;
+        const notify = () => {
+          const { state } = ctx.get(editorViewCtx);
+          let selection = "";
+          if (!state.selection.empty) {
+            const { from, to } = state.selection;
+            const slice = state.doc.slice(from, to);
+            const { schema } = state.doc.type;
+            let wrapper = schema.topNodeType.createAndFill(null, slice.content);
+            if (!wrapper) {
+              const paragraph = schema.nodes.paragraph?.createAndFill(null, slice.content);
+              if (paragraph) wrapper = schema.topNodeType.createAndFill(null, paragraph);
+            }
+            selection = wrapper ? ctx.get(serializerCtx)(wrapper) : state.doc.textBetween(from, to);
+          }
+          if (selection === previousSelection) return;
+          previousSelection = selection;
+          onSelectionChangeRef.current(selection);
+        };
+        return {
+          update: (view, prevState) => {
+            if (!view.state.selection.eq(prevState.selection) || view.state.doc !== prevState.doc) notify();
+          },
+        };
+      },
+    }));
+    crepeRef.current = crepe;
+    crepe.editor.use(emptyHeadingBackspace).use(selectionTracker);
     crepe.on((listener) => {
       listener.markdownUpdated((_ctx, markdown, previous) => {
         if (markdown !== previous) onChangeRef.current(markdown);
@@ -100,10 +113,10 @@ export function MarkdownEditor({ value, onChange, onError }: Props) {
     });
     crepe.create().catch((error) => onErrorRef.current(error instanceof Error ? error.message : "编辑器初始化失败"));
     return () => {
-      imageInput.destroy();
+      crepeRef.current = null;
       void crepe.destroy();
     };
   }, []);
 
   return <div className="milkdown-editor" ref={rootRef} />;
-}
+});

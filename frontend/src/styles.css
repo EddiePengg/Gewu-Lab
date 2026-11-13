@@ -180,7 +180,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .markdown-body .katex-display { overflow-x: auto; overflow-y: hidden; padding: 5px 0; }
 
 .editor-page { min-height: 100vh; background: #fdfdfe; }
-.editor-topbar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 65px; padding: 0 30px; background: #fdfdfef2; border-bottom: 1px solid var(--line); backdrop-filter: blur(12px); }
+.editor-topbar { position: sticky; top: 0; z-index: 1000; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 65px; padding: 0 30px; background: #fdfdfef2; border-bottom: 1px solid var(--line); backdrop-filter: blur(12px); }
 .editor-topbar .primary-button { justify-self: end; min-height: 36px; }
 .editor-mode { display: flex; align-items: center; gap: 7px; color: #777780; font-size: 12px; }
 .editor-error { margin: 15px 30px 0; }
@@ -305,12 +305,51 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .milkdown-editor .ProseMirror p { line-height: 1.9; }
 .card-editor-footer { max-width: 900px; margin: 0 auto; padding: 18px 32px 30px; background: #fafafd; border-top: 1px solid var(--line); }
 .card-editor-footer .editor-label { margin-top: 0; }
+.editor-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+.editor-document { min-width: 0; }
+.copilot-sidebar { position: sticky; top: 65px; max-height: calc(100vh - 65px); overflow-y: auto; background: #fafafd; border-left: 1px solid var(--line); }
+.copilot-heading { display: flex; align-items: flex-start; gap: 10px; padding: 22px 20px; color: var(--purple); border-bottom: 1px solid var(--line); }
+.copilot-heading svg { flex-shrink: 0; margin-top: 1px; }
+.copilot-heading h2 { margin: 0 0 5px; color: var(--ink); font-size: 14px; font-weight: 600; }
+.copilot-heading p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.copilot-selection { margin: 18px 18px 0; padding: 11px 12px; background: #f3f3f7; border: 1px solid transparent; border-radius: 9px; }
+.copilot-selection.has-selection { background: #f1f2fb; border-color: #dfe2f5; }
+.copilot-selection > span { display: block; margin-bottom: 7px; color: #92939f; font-size: 9px; font-weight: 600; letter-spacing: .8px; }
+.copilot-selection p { margin: 0; color: #85858f; font-size: 11px; line-height: 1.6; }
+.copilot-selection pre { max-height: 140px; margin: 0; overflow: auto; color: #55566a; font-family: inherit; font-size: 11px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.copilot-label { display: block; margin: 20px 18px 8px; color: #5d5e66; font-size: 11px; font-weight: 600; }
+.copilot-instruction { display: block; width: calc(100% - 36px); margin: 0 18px; padding: 11px 12px; color: var(--ink); background: white; border: 1px solid #e1e1e8; border-radius: 9px; outline: none; font: inherit; font-size: 12px; line-height: 1.7; resize: vertical; }
+.copilot-instruction:focus { border-color: #b8c0e5; box-shadow: 0 0 0 3px #6575d809; }
+.copilot-actions { display: flex; gap: 8px; margin: 12px 18px 0; }
+.copilot-actions button { min-height: 36px; font-size: 12px; }
+.copilot-actions .primary-button { flex: 1; }
+.copilot-shortcut { margin: 9px 18px 20px; color: #aaaab2; font-size: 9px; line-height: 1.6; }
+.copilot-error { margin: 0 18px 16px; }
+.copilot-result { margin: 0 18px 18px; padding: 12px; background: white; border: 1px solid #e1e3ef; border-radius: 9px; }
+.copilot-result > span { display: block; margin-bottom: 8px; color: #85868f; font-size: 9px; font-weight: 600; letter-spacing: .8px; }
+.copilot-result pre { max-height: 240px; margin: 0 0 12px; overflow: auto; color: #4c4d58; font-family: inherit; font-size: 11px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.copilot-result .primary-button { width: 100%; min-height: 35px; font-size: 11px; }
+.copilot-settings { margin: 0 18px; padding: 16px 0 22px; border-top: 1px solid var(--line); }
+.copilot-settings summary { display: flex; align-items: center; gap: 7px; color: #676872; cursor: pointer; font-size: 11px; font-weight: 600; list-style: none; }
+.copilot-settings summary::-webkit-details-marker { display: none; }
+.copilot-settings label { display: block; margin: 16px 0 8px; color: #85858f; font-size: 10px; }
+.copilot-settings textarea { width: 100%; padding: 10px; color: var(--ink); background: white; border: 1px solid #e1e1e8; border-radius: 8px; outline: none; font: inherit; font-size: 11px; line-height: 1.7; resize: vertical; }
+.copilot-settings textarea:focus { border-color: #b8c0e5; }
+.copilot-settings p { margin: 8px 0 0; color: #aaaab2; font-size: 9px; line-height: 1.6; }
+
+@media (max-width: 900px) {
+  .editor-body { display: block; }
+  .copilot-sidebar { position: static; max-height: none; border-top: 1px solid var(--line); border-left: 0; }
+}
 
 @media (max-width: 640px) {
+  .app-shell:has(.editor-page) .sidebar { display: none; }
+  .app-shell:has(.editor-page) .main-content { width: 100%; margin-left: 0; }
   .editor-topbar { grid-template-columns: auto 1fr; gap: 10px; }
   .editor-actions .secondary-button { width: 38px; padding: 0; font-size: 0; }
   .editor-actions .secondary-button svg { width: 17px; height: 17px; }
-  .wysiwyg-workspace { padding: 10px 18px 25px; }
+  .wysiwyg-workspace { padding: 10px 12px 25px; }
+  .milkdown-editor { width: 100%; min-width: 0; }
   .milkdown-editor .ProseMirror h1 { font-size: 28px; }
   .card-editor-footer { padding: 18px; }
 }
@@ -330,10 +369,3 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .login-card label { margin-bottom: 9px; }
 .logout-button { display: grid; place-items: center; flex-shrink: 0; margin-left: auto; padding: 3px; color: #92929b; background: none; border: 0; border-radius: 5px; }
 .logout-button:hover { color: var(--purple); background: #e4e6f1; }
-
-.milkdown .ai-instruction-textarea { min-height: 28px; max-height: 140px; resize: none; overflow-y: auto; }
-.milkdown .ai-image-attachment { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 6px 8px; color: #6d6e78; background: #f2f3f8; border: 1px solid #e2e4ef; border-radius: 8px; font-size: 11px; }
-.milkdown .ai-image-attachment img { width: 34px; height: 34px; object-fit: cover; border-radius: 5px; }
-.milkdown .ai-image-attachment span { flex: 1; }
-.milkdown .ai-image-attachment button { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; color: #92939c; background: transparent; border: 0; border-radius: 5px; font-size: 17px; }
-.milkdown .ai-image-attachment button:hover { color: #4f5058; background: #e6e7ed; }

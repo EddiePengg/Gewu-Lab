@@ -21,6 +21,7 @@ class AIEditRequest(BaseModel):
     document: str
     selection: str
     instruction: str = Field(min_length=1, max_length=4000)
+    system_prompt: str = Field(default="", max_length=4000)
     image: Optional[str] = None
 
     @field_validator("image")
@@ -53,10 +54,14 @@ def edit(payload: AIEditRequest):
     if payload.image:
         content.append({"type": "image_url", "image_url": {"url": payload.image}})
 
+    system_prompt = SYSTEM_PROMPT
+    if payload.system_prompt:
+        system_prompt += f"\n\n用户附加提示词：\n{payload.system_prompt}"
+
     client = OpenAI(api_key=settings.ai_api_key, base_url=settings.ai_base_url, timeout=120)
     stream = client.chat.completions.create(
         model=settings.ai_model,
-        messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": content}],
+        messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": content}],
         stream=True,
     )
 

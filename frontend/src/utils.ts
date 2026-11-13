@@ -1,9 +1,11 @@
+import { normalizeMathDelimiters } from "./mathDelimiters";
+
 export function formatDate(value: string) {
   return new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(new Date(value));
 }
 
 export function markdownPreview(source: string, lineCount = 6) {
-  const lines = source.trim().split("\n");
+  const lines = normalizeMathDelimiters(source).trim().split("\n");
   let preview = lines.slice(0, lineCount).join("\n");
   if ((preview.match(/^```/gm) || []).length % 2 !== 0) preview += "\n```";
   if ((preview.match(/^\$\$\s*$/gm) || []).length % 2 !== 0) preview += "\n$$";

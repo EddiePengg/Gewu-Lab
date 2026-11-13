@@ -1,9 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, Check, SquarePen } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { useApp } from "../App";
-import { MarkdownEditor } from "../MarkdownEditor";
+import { CopilotSidebar } from "../CopilotSidebar";
+import { MarkdownEditor, type MarkdownEditorHandle } from "../MarkdownEditor";
 import { parseTags } from "../utils";
 
 export function CardEditor() {
@@ -17,6 +18,8 @@ export function CardEditor() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(editing);
   const [error, setError] = useState("");
+  const [aiSelection, setAISelection] = useState("");
+  const editorRef = useRef<MarkdownEditorHandle>(null);
 
   useEffect(() => {
     if (!cardId) return;
@@ -29,10 +32,11 @@ export function CardEditor() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!content.trim() || content.trim() === "#") return;
+    const currentContent = editorRef.current?.getMarkdown() ?? content;
+    if (!currentContent.trim() || currentContent.trim() === "#") return;
     setSaving(true);
     setError("");
-    const input = { content, tags: parseTags(tags) };
+    const input = { content: currentContent, tags: parseTags(tags) };
     try {
       const card = editing
         ? await api.updateCard(Number(cardId), input)
@@ -50,20 +54,45 @@ export function CardEditor() {
   const backPath = editing ? `/cards/${cardId}` : `/w/${resolvedWorkspaceId}`;
 
   return (
-    <form className="editor-page" onSubmit={submit}>
+    <form
+      className="editor-page"
+      onSubmit={submit}
+      onKeyDownCapture={(event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+          event.preventDefault();
+          if (!saving) event.currentTarget.requestSubmit();
+        }
+      }}
+    >
       <header className="editor-topbar">
         <Link to={backPath} className="back-link"><ArrowLeft size={16} />取消</Link>
         <div className="editor-mode"><SquarePen size={16} />{editing ? "编辑卡片" : "新建卡片"}</div>
         <button className="primary-button" disabled={saving || !content.trim() || content.trim() === "#"}><Check size={16} />{saving ? "保存中…" : "保存"}</button>
       </header>
       {error && <div className="inline-error editor-error">{error}</div>}
-      <div className="wysiwyg-workspace">
-        <MarkdownEditor key={cardId || workspaceId} value={content} onChange={setContent} onError={setError} />
+      <div className="editor-body">
+        <div className="editor-document">
+          <div className="wysiwyg-workspace">
+            <MarkdownEditor
+              ref={editorRef}
+              key={cardId || workspaceId}
+              value={content}
+              onChange={setContent}
+              onError={setError}
+              onSelectionChange={setAISelection}
+            />
+          </div>
+          <footer className="card-editor-footer">
+            <label className="editor-label" htmlFor="tags">标签<span>使用逗号分隔，最多 12 个</span></label>
+            <input id="tags" className="tags-input" value={tags} onChange={(event) => setTags(event.target.value)} placeholder="微积分, 导数, 待复习" />
+          </footer>
+        </div>
+        <CopilotSidebar
+          selection={aiSelection}
+          getDocument={() => editorRef.current?.getMarkdown() ?? content}
+          onApply={(markdown) => editorRef.current?.applyMarkdown(markdown)}
+        />
       </div>
-      <footer className="card-editor-footer">
-        <label className="editor-label" htmlFor="tags">标签<span>使用逗号分隔，最多 12 个</span></label>
-        <input id="tags" className="tags-input" value={tags} onChange={(event) => setTags(event.target.value)} placeholder="微积分, 导数, 待复习" />
-      </footer>
     </form>
   );
 }
