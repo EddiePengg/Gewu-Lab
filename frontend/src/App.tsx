@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Link, Navigate, NavLink, Outlet, Route, Routes, useOutletContext } from "react-router-dom";
-import { BookOpen, FlaskConical, LogOut, Plus } from "lucide-react";
+import { BookOpen, FlaskConical, LogOut, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { api, clearApiToken, getApiToken } from "./api";
 import type { Workspace } from "./types";
 import { WorkspacePage } from "./pages/WorkspacePage";
@@ -23,6 +23,7 @@ function AppShell({ onLogout }: { onLogout: () => void }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const refreshWorkspaces = useCallback(async () => {
     try {
       setWorkspaces(await api.listWorkspaces());
@@ -40,33 +41,42 @@ function AppShell({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <Link to="/" className="brand" aria-label="格物 Lab 首页">
-          <img src="/logo.svg" className="brand-mark" alt="" />
-          <span className="brand-name">格物 <b>Lab</b></span>
-        </Link>
-        <div className="sidebar-label"><span>学习空间</span><FlaskConical size={14} /></div>
-        <nav className="workspace-nav">
-          {workspaces.map((workspace) => (
-            <NavLink
-              key={workspace.id}
-              to={`/w/${workspace.id}`}
-              className={({ isActive }) => `workspace-link${isActive ? " active" : ""}`}
-              title={workspace.name}
-            >
-              <span className="workspace-dot" style={{ background: workspace.color }} />
-              <span className="workspace-link-name">{workspace.name}</span>
-              <span className="workspace-total">{workspace.card_count}</span>
-            </NavLink>
-          ))}
-        </nav>
-        <Link to="/workspaces/new" className="new-workspace-link"><Plus size={16} /><span>新建 Workspace</span></Link>
-        <div className="sidebar-footer">
-          <BookOpen size={16} />
-          <span>记录知识，也记录理解的过程。</span>
-          <button className="logout-button" type="button" onClick={onLogout} title="退出登录" aria-label="退出登录"><LogOut size={15} /></button>
+      {sidebarCollapsed ? (
+        <div className="collapsed-sidebar">
+          <button type="button" title="展开左侧栏" aria-label="展开左侧栏" onClick={() => setSidebarCollapsed(false)}><PanelLeftOpen size={19} /></button>
         </div>
-      </aside>
+      ) : (
+        <aside className="sidebar">
+          <div className="sidebar-top">
+            <Link to="/" className="brand" aria-label="格物 Lab 首页">
+              <img src="/logo.svg" className="brand-mark" alt="" />
+              <span className="brand-name">格物 <b>Lab</b></span>
+            </Link>
+            <button className="sidebar-toggle" type="button" title="收起左侧栏" aria-label="收起左侧栏" onClick={() => setSidebarCollapsed(true)}><PanelLeftClose size={17} /></button>
+          </div>
+          <div className="sidebar-label"><span>学习空间</span><FlaskConical size={14} /></div>
+          <nav className="workspace-nav">
+            {workspaces.map((workspace) => (
+              <NavLink
+                key={workspace.id}
+                to={`/w/${workspace.id}`}
+                className={({ isActive }) => `workspace-link${isActive ? " active" : ""}`}
+                title={workspace.name}
+              >
+                <span className="workspace-dot" style={{ background: workspace.color }} />
+                <span className="workspace-link-name">{workspace.name}</span>
+                <span className="workspace-total">{workspace.card_count}</span>
+              </NavLink>
+            ))}
+          </nav>
+          <Link to="/workspaces/new" className="new-workspace-link"><Plus size={16} /><span>新建 Workspace</span></Link>
+          <div className="sidebar-footer">
+            <BookOpen size={16} />
+            <span>记录知识，也记录理解的过程。</span>
+            <button className="logout-button" type="button" onClick={onLogout} title="退出登录" aria-label="退出登录"><LogOut size={15} /></button>
+          </div>
+        </aside>
+      )}
       <main className="main-content">
         {error && <div className="global-error">{error}<button onClick={() => void refreshWorkspaces()}>重试</button></div>}
         <Outlet context={{ workspaces, loading, refreshWorkspaces }} />
