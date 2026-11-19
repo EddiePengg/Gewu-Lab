@@ -4,7 +4,7 @@ import { editorViewCtx, inputRulesCtx, schemaCtx, serializerCtx } from "@milkdow
 import { InputRule } from "@milkdown/kit/prose/inputrules";
 import { keymap } from "@milkdown/kit/prose/keymap";
 import { Plugin, TextSelection } from "@milkdown/kit/prose/state";
-import { $inputRule, $prose, replaceAll } from "@milkdown/kit/utils";
+import { $inputRule, $prose, insert, replaceAll } from "@milkdown/kit/utils";
 import { API_URL, authorizedFetch } from "./api";
 import { normalizeMathDelimiters } from "./mathDelimiters";
 import "@milkdown/crepe/theme/common/style.css";
@@ -19,6 +19,7 @@ interface Props {
 
 export interface MarkdownEditorHandle {
   getMarkdown: () => string | undefined;
+  insertMarkdown: (markdown: string) => void;
   replaceDocument: (markdown: string) => string | undefined;
 }
 
@@ -72,6 +73,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
   onSelectionChangeRef.current = onSelectionChange;
   useImperativeHandle(ref, () => ({
     getMarkdown: () => crepeRef.current?.getMarkdown(),
+    insertMarkdown: (markdown) => {
+      crepeRef.current?.editor.action(insert(normalizeMathDelimiters(markdown)));
+    },
     replaceDocument: (markdown) => {
       crepeRef.current?.editor.action(replaceAll(normalizeMathDelimiters(markdown)));
       return crepeRef.current?.getMarkdown();

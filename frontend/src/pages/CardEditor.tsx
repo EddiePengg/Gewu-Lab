@@ -113,6 +113,7 @@ export function CardEditor() {
         <CopilotSidebar
           selection={aiSelection}
           getDocument={() => editorRef.current?.getMarkdown() ?? content}
+          onInsert={(markdown) => editorRef.current?.insertMarkdown(markdown)}
           onReplace={(markdown) => editorRef.current?.replaceDocument(markdown) ?? markdown}
         />
       </div>

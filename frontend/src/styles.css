@@ -352,6 +352,9 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .copilot-message-content .markdown-body h1, .copilot-message-content .markdown-body h2, .copilot-message-content .markdown-body h3 { margin: .8em 0 .45em; font-size: 14px; }
 .copilot-message-content .markdown-body pre { padding: 9px; font-size: 10px; white-space: pre-wrap; }
 .copilot-thinking { color: #999aa6; font-size: 11px; }
+.copilot-message-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.copilot-message-actions button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; color: #777da5; background: transparent; border: 0; border-radius: 5px; font-size: 9px; }
+.copilot-message-actions button:hover:not(:disabled) { background: #eceef8; }
 .copilot-agent-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 7px; }
 .copilot-agent-status > span, .copilot-agent-status > button { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; }
 .copilot-agent-status > span { color: #6b8a7d; }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Check, MessageSquarePlus, PanelRightClose, PanelRightOpen, Send, Settings2, Square, Undo2 } from "lucide-react";
+import { Bot, Check, Copy, CornerDownLeft, MessageSquarePlus, PanelRightClose, PanelRightOpen, Send, Settings2, Square, Undo2 } from "lucide-react";
 import { API_URL, authorizedFetch } from "./api";
 import { Markdown } from "./Markdown";
 
@@ -24,6 +24,7 @@ interface ChatMessage {
 interface Props {
   selection: string;
   getDocument: () => string;
+  onInsert: (markdown: string) => void;
   onReplace: (markdown: string) => string;
 }
 
@@ -36,7 +37,7 @@ function parseAgentResponse(source: string) {
   };
 }
 
-export function CopilotSidebar({ selection, getDocument, onReplace }: Props) {
+export function CopilotSidebar({ selection, getDocument, onInsert, onReplace }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [mode, setMode] = useState<CopilotMode>("ask");
   const [instruction, setInstruction] = useState("");
@@ -44,7 +45,9 @@ export function CopilotSidebar({ selection, getDocument, onReplace }: Props) {
   const [conversations, setConversations] = useState<Record<CopilotMode, ChatMessage[]>>({ ask: [], agent: [] });
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const abortRef = useRef<AbortController>(null);
+  const copyResetRef = useRef<number | null>(null);
   const nextIdRef = useRef(0);
   const messagesRef = useRef<HTMLDivElement>(null);
   const messages = conversations[mode];
@@ -53,7 +56,10 @@ export function CopilotSidebar({ selection, getDocument, onReplace }: Props) {
     localStorage.setItem(PROMPT_KEY, systemPrompt);
   }, [systemPrompt]);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => () => {
+    abortRef.current?.abort();
+    if (copyResetRef.current !== null) window.clearTimeout(copyResetRef.current);
+  }, []);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -69,6 +75,34 @@ export function CopilotSidebar({ selection, getDocument, onReplace }: Props) {
 
   function updateMessage(targetMode: CopilotMode, id: number, update: (message: ChatMessage) => ChatMessage) {
     updateMessages(targetMode, (current) => current.map((message) => message.id === id ? update(message) : message));
+  }
+
+  async function copyMarkdown(message: ChatMessage) {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopiedId(message.id);
+      if (copyResetRef.current !== null) window.clearTimeout(copyResetRef.current);
+      copyResetRef.current = window.setTimeout(() => setCopiedId(null), 1600);
+      setError("");
+    } catch {
+      setError("复制失败，请检查浏览器的剪贴板权限。");
+    }
+  }
+
+  function insertAnswer(message: ChatMessage) {
+    if (!selection) {
+      onInsert(message.content);
+      setError("");
+      return;
+    }
+    const document = getDocument();
+    const start = document.indexOf(selection);
+    if (start === -1) {
+      setError("无法在原始文档中定位当前选区，请重新选择后再试。");
+      return;
+    }
+    onReplace(document.slice(0, start) + message.content + document.slice(start + selection.length));
+    setError("");
   }
 
   function applyPendingEdit(message: ChatMessage) {
@@ -223,7 +257,7 @@ export function CopilotSidebar({ selection, getDocument, onReplace }: Props) {
           <div className="copilot-empty">
             <Bot size={25} />
             <h3>{mode === "ask" ? "一起理解这张卡片" : "让 Agent 编辑这张卡片"}</h3>
-            <p>{mode === "ask" ? "提问、检查思路或讨论改写方式，不会修改卡片。" : "描述修改目标，Agent 会直接编辑文档；每次修改都可以撤销。"}</p>
+            <p>{mode === "ask" ? "提问和讨论不会自动修改卡片，可复制原始 Markdown 或手动插入。" : "描述修改目标，Agent 会直接编辑文档；每次修改都可以撤销。"}</p>
             {mode === "ask" ? (
               <>
                 <button type="button" onClick={() => setInstruction("讲解这张卡片的主要内容")}>讲解这张卡片</button>
@@ -242,6 +276,17 @@ export function CopilotSidebar({ selection, getDocument, onReplace }: Props) {
             <div className="copilot-message-content">
               {message.role === "user" ? <p>{message.content}</p> : message.content ? <Markdown>{message.content}</Markdown> : <span className="copilot-thinking">{mode === "agent" ? "正在编辑文档…" : "正在思考…"}</span>}
             </div>
+            {mode === "ask" && message.role === "assistant" && message.content && (
+              <div className="copilot-message-actions">
+                <button type="button" disabled={running} onMouseDown={(event) => event.preventDefault()} onClick={() => void copyMarkdown(message)}>
+                  {copiedId === message.id ? <Check size={13} /> : <Copy size={13} />}
+                  {copiedId === message.id ? "已复制" : "复制 Markdown"}
+                </button>
+                <button type="button" disabled={running} onMouseDown={(event) => event.preventDefault()} onClick={() => insertAnswer(message)}>
+                  <CornerDownLeft size={13} />{selection ? "替换选区" : "插入到光标"}
+                </button>
+              </div>
+            )}
             {message.agentEdit && (
               <div className="copilot-agent-status">
                 {message.agentEdit.applied ? (
