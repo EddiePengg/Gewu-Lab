@@ -327,6 +327,10 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .copilot-heading-actions button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; color: #8a8b96; background: transparent; border: 0; border-radius: 6px; }
 .copilot-heading-actions button:hover:not(:disabled) { color: var(--ink); background: #ececf2; }
 .copilot-heading-actions button svg { margin: 0; }
+.copilot-mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin: 12px 14px 0; padding: 3px; background: #ededf2; border-radius: 8px; }
+.copilot-mode-tabs button { min-height: 29px; padding: 0 10px; color: #858691; background: transparent; border: 0; border-radius: 6px; font-size: 11px; font-weight: 600; }
+.copilot-mode-tabs button.active { color: #4f5cae; background: white; box-shadow: 0 1px 4px #34364b12; }
+.copilot-mode-tabs button:hover:not(:disabled):not(.active) { color: var(--ink); background: #f7f7fa; }
 .copilot-selection { margin: 12px 14px 0; padding: 9px 11px; background: #f3f3f7; border: 1px solid transparent; border-radius: 8px; }
 .copilot-selection.has-selection { background: #f1f2fb; border-color: #dfe2f5; }
 .copilot-selection > span { display: block; color: #92939f; font-size: 9px; font-weight: 600; letter-spacing: .4px; }
@@ -348,8 +352,12 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .copilot-message-content .markdown-body h1, .copilot-message-content .markdown-body h2, .copilot-message-content .markdown-body h3 { margin: .8em 0 .45em; font-size: 14px; }
 .copilot-message-content .markdown-body pre { padding: 9px; font-size: 10px; white-space: pre-wrap; }
 .copilot-thinking { color: #999aa6; font-size: 11px; }
-.copilot-apply { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; padding: 4px 7px; color: #777da5; background: transparent; border: 0; border-radius: 5px; font-size: 9px; }
-.copilot-apply:hover:not(:disabled) { background: #eceef8; }
+.copilot-agent-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 7px; }
+.copilot-agent-status > span, .copilot-agent-status > button { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; }
+.copilot-agent-status > span { color: #6b8a7d; }
+.copilot-agent-status > span.copilot-undone { color: #92939f; }
+.copilot-agent-status > button { margin-left: auto; padding: 4px 7px; color: #777da5; background: transparent; border: 0; border-radius: 5px; }
+.copilot-agent-status > button:hover:not(:disabled) { background: #eceef8; }
 .copilot-error { margin: 10px 14px 0; }
 .copilot-composer { padding: 12px 14px 10px; border-top: 1px solid var(--line); }
 .copilot-instruction { display: block; width: 100%; margin: 0; padding: 10px 11px; color: var(--ink); background: white; border: 1px solid #e1e1e8; border-radius: 9px; outline: none; font: inherit; font-size: 12px; line-height: 1.6; resize: none; }
@@ -404,3 +412,19 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .login-card label { margin-bottom: 9px; }
 .logout-button { display: grid; place-items: center; flex-shrink: 0; margin-left: auto; padding: 3px; color: #92929b; background: none; border: 0; border-radius: 5px; }
 .logout-button:hover { color: var(--purple); background: #e4e6f1; }
+
+.unsaved-overlay { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; padding: 20px; background: #25263055; backdrop-filter: blur(3px); }
+.unsaved-dialog { width: min(450px, 100%); padding: 26px; background: white; border: 1px solid var(--line); border-radius: 15px; box-shadow: 0 20px 60px #25263026; }
+.unsaved-dialog h2 { margin: 0 0 10px; font-size: 19px; letter-spacing: -.3px; }
+.unsaved-dialog > p { margin: 0 0 22px; color: #777881; font-size: 13px; line-height: 1.8; }
+.unsaved-dialog .inline-error { margin-bottom: 16px; font-size: 11px; line-height: 1.6; }
+.unsaved-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.unsaved-actions button { min-height: 37px; padding: 0 13px; font-size: 12px; }
+.unsaved-discard { color: #a05252; }
+.unsaved-discard:hover { color: #913f3f; border-color: #edcccc; background: #fff8f8; }
+@media (max-width: 480px) {
+  .unsaved-dialog { padding: 22px; }
+  .unsaved-actions { flex-wrap: wrap; }
+  .unsaved-actions button { flex: 1; white-space: nowrap; }
+  .unsaved-actions .primary-button { flex-basis: 100%; order: -1; }
+}

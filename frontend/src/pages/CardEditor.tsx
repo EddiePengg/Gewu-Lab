@@ -5,6 +5,8 @@ import { api } from "../api";
 import { useApp } from "../App";
 import { CopilotSidebar } from "../CopilotSidebar";
 import { MarkdownEditor, type MarkdownEditorHandle } from "../MarkdownEditor";
+import { normalizeMathDelimiters } from "../mathDelimiters";
+import { UnsavedChangesGuard } from "../UnsavedChangesGuard";
 import { parseTags } from "../utils";
 
 export function CardEditor() {
@@ -14,7 +16,9 @@ export function CardEditor() {
   const editing = Boolean(cardId);
   const [resolvedWorkspaceId, setResolvedWorkspaceId] = useState(Number(workspaceId));
   const [content, setContent] = useState("");
+  const [savedContent, setSavedContent] = useState("");
   const [tags, setTags] = useState("");
+  const [savedTags, setSavedTags] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(editing);
   const [error, setError] = useState("");
@@ -24,16 +28,18 @@ export function CardEditor() {
   useEffect(() => {
     if (!cardId) return;
     api.getCard(Number(cardId)).then((card) => {
+      const nextTags = card.tags.join(", ");
       setResolvedWorkspaceId(card.workspace_id);
       setContent(card.content);
-      setTags(card.tags.join(", "));
+      setSavedContent(card.content);
+      setTags(nextTags);
+      setSavedTags(nextTags);
     }).catch((reason) => setError(reason instanceof Error ? reason.message : "加载失败")).finally(() => setLoading(false));
   }, [cardId]);
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  async function persist(navigateAfterSave = true) {
     const currentContent = editorRef.current?.getMarkdown() ?? content;
-    if (!currentContent.trim() || currentContent.trim() === "#") return;
+    if (!currentContent.trim() || currentContent.trim() === "#") return false;
     setSaving(true);
     setError("");
     const input = { content: currentContent, tags: parseTags(tags) };
@@ -41,17 +47,33 @@ export function CardEditor() {
       const card = editing
         ? await api.updateCard(Number(cardId), input)
         : await api.createCard(resolvedWorkspaceId, input);
+      const nextTags = card.tags.join(", ");
+      setContent(card.content);
+      setSavedContent(card.content);
+      setTags(nextTags);
+      setSavedTags(nextTags);
       await refreshWorkspaces();
-      navigate(`/cards/${card.id}`);
+      if (navigateAfterSave) navigate(`/cards/${card.id}`);
+      return true;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "保存失败");
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    void persist();
+  }
+
   if (loading) return <div className="page-loading">正在打开编辑器…</div>;
   const backPath = editing ? `/cards/${cardId}` : `/w/${resolvedWorkspaceId}`;
+  const contentChanged = normalizeMathDelimiters(content) !== normalizeMathDelimiters(savedContent);
+  const dirty = (editing
+    ? contentChanged
+    : Boolean(content.trim() && content.trim() !== "#" && contentChanged)) || tags !== savedTags;
 
   return (
     <form
@@ -64,6 +86,7 @@ export function CardEditor() {
         }
       }}
     >
+      <UnsavedChangesGuard when={dirty && !saving} onSave={() => persist(false)} />
       <header className="editor-topbar">
         <Link to={backPath} className="back-link"><ArrowLeft size={16} />取消</Link>
         <div className="editor-mode"><SquarePen size={16} />{editing ? "编辑卡片" : "新建卡片"}</div>
@@ -90,7 +113,7 @@ export function CardEditor() {
         <CopilotSidebar
           selection={aiSelection}
           getDocument={() => editorRef.current?.getMarkdown() ?? content}
-          onApply={(markdown) => editorRef.current?.applyMarkdown(markdown)}
+          onReplace={(markdown) => editorRef.current?.replaceDocument(markdown) ?? markdown}
         />
       </div>
     </form>

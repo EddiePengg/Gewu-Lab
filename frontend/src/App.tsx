@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { BrowserRouter, Link, Navigate, NavLink, Outlet, Route, Routes, useOutletContext } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createBrowserRouter, Link, Navigate, NavLink, Outlet, RouterProvider, useOutletContext } from "react-router-dom";
 import { BookOpen, FlaskConical, LogOut, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { api, clearApiToken, getApiToken } from "./api";
 import type { Workspace } from "./types";
@@ -93,6 +93,25 @@ function Home() {
     : <Navigate to="/workspaces/new" replace />;
 }
 
+function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
+  const router = useMemo(() => createBrowserRouter([
+    {
+      element: <AppShell onLogout={onLogout} />,
+      children: [
+        { path: "/", element: <Home /> },
+        { path: "/workspaces/new", element: <WorkspaceForm /> },
+        { path: "/w/:workspaceId", element: <WorkspacePage /> },
+        { path: "/w/:workspaceId/new", element: <CardEditor /> },
+        { path: "/cards/:cardId", element: <CardPage /> },
+        { path: "/cards/:cardId/edit", element: <CardEditor /> },
+        { path: "*", element: <Home /> },
+      ],
+    },
+  ]), [onLogout]);
+
+  return <RouterProvider router={router} />;
+}
+
 export default function App() {
   const [authenticated, setAuthenticated] = useState(() => Boolean(getApiToken()));
 
@@ -102,26 +121,12 @@ export default function App() {
     return () => window.removeEventListener("gewu:unauthorized", handleUnauthorized);
   }, []);
 
-  function logout() {
+  const logout = useCallback(() => {
     clearApiToken();
     setAuthenticated(false);
-  }
+  }, []);
 
-  return (
-    <BrowserRouter>
-      {authenticated ? (
-        <Routes>
-          <Route element={<AppShell onLogout={logout} />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/workspaces/new" element={<WorkspaceForm />} />
-            <Route path="/w/:workspaceId" element={<WorkspacePage />} />
-            <Route path="/w/:workspaceId/new" element={<CardEditor />} />
-            <Route path="/cards/:cardId" element={<CardPage />} />
-            <Route path="/cards/:cardId/edit" element={<CardEditor />} />
-            <Route path="*" element={<Home />} />
-          </Route>
-        </Routes>
-      ) : <LoginPage onLogin={() => setAuthenticated(true)} />}
-    </BrowserRouter>
-  );
+  return authenticated
+    ? <AuthenticatedApp onLogout={logout} />
+    : <LoginPage onLogin={() => setAuthenticated(true)} />;
 }

@@ -22,6 +22,17 @@ CHAT_SYSTEM_PROMPT = """你是格物 Lab 卡片编辑器中的 AI 副驾驶，�
 回答应简洁清晰，数学内容使用 LaTeX：行内公式使用 $...$，独立公式将 $$ 放在单独的行。
 当前卡片和选区会随最新消息提供；结合聊天历史理解追问，不要重复已经说过的内容。"""
 
+AGENT_SYSTEM_PROMPT = """你是格物 Lab 卡片编辑器中的 AI Agent，负责直接修改用户当前文档。
+根据用户要求和对话历史编辑文档，保留与任务无关的内容、结构和含义，不要只给建议或修改片段。
+如果提供了非空选区，只修改选区对应的内容，其余文档必须原样保留。
+数学内容使用 LaTeX：行内公式使用 $...$，独立公式将 $$ 放在单独的行。
+只输出以下协议，不要使用代码围栏，不要在协议前后添加任何内容：
+<summary>用一句话简要说明实际修改</summary>
+<document>
+修改后的完整 Markdown 文档
+</document>
+document 中必须包含完整文档，即使没有改动也要原样返回。summary 中不要包含完整文档。"""
+
 
 class AIEditRequest(BaseModel):
     document: str
@@ -105,12 +116,8 @@ def edit(payload: AIEditRequest):
     ])
 
 
-@router.post("/chat")
-def chat(payload: AIChatRequest):
-    if payload.messages[-1].role != "user":
-        raise HTTPException(status_code=422, detail="最后一条消息必须来自用户")
-
-    system_prompt = CHAT_SYSTEM_PROMPT
+def build_chat_messages(payload: AIChatRequest, base_prompt: str):
+    system_prompt = base_prompt
     if payload.system_prompt:
         system_prompt += f"\n\n用户附加提示词：{payload.system_prompt}"
 
@@ -128,5 +135,18 @@ def chat(payload: AIChatRequest):
 {content}
 </message>"""
         messages.append({"role": message.role, "content": content})
+    return messages
 
-    return stream_completion(messages)
+
+@router.post("/chat")
+def chat(payload: AIChatRequest):
+    if payload.messages[-1].role != "user":
+        raise HTTPException(status_code=422, detail="最后一条消息必须来自用户")
+    return stream_completion(build_chat_messages(payload, CHAT_SYSTEM_PROMPT))
+
+
+@router.post("/agent")
+def agent(payload: AIChatRequest):
+    if payload.messages[-1].role != "user":
+        raise HTTPException(status_code=422, detail="最后一条消息必须来自用户")
+    return stream_completion(build_chat_messages(payload, AGENT_SYSTEM_PROMPT))

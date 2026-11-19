@@ -1,9 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { Crepe } from "@milkdown/crepe";
-import { editorViewCtx, serializerCtx } from "@milkdown/kit/core";
+import { editorViewCtx, inputRulesCtx, schemaCtx, serializerCtx } from "@milkdown/kit/core";
+import { InputRule } from "@milkdown/kit/prose/inputrules";
 import { keymap } from "@milkdown/kit/prose/keymap";
 import { Plugin, TextSelection } from "@milkdown/kit/prose/state";
-import { $prose, insert } from "@milkdown/kit/utils";
+import { $inputRule, $prose, replaceAll } from "@milkdown/kit/utils";
 import { API_URL, authorizedFetch } from "./api";
 import { normalizeMathDelimiters } from "./mathDelimiters";
 import "@milkdown/crepe/theme/common/style.css";
@@ -18,7 +19,7 @@ interface Props {
 
 export interface MarkdownEditorHandle {
   getMarkdown: () => string | undefined;
-  applyMarkdown: (markdown: string) => void;
+  replaceDocument: (markdown: string) => string | undefined;
 }
 
 async function uploadImage(file: File) {
@@ -28,6 +29,20 @@ async function uploadImage(file: File) {
   if (!response.ok) throw new Error("图片上传失败");
   return (await response.json() as { url: string }).url;
 }
+
+const inlineMathInput = $inputRule((ctx) => {
+  const rule = new InputRule(
+    /(?:\$\$([^\s$](?:[^$]*[^\s$])?)\$\$|(?<!\$)\$([^\s$](?:[^$]*[^\s$])?)\$)$/,
+    (state, match, start, end) => {
+      const value = match[1] ?? match[2];
+      if (!value) return null;
+      const node = ctx.get(schemaCtx).nodes.math_inline.create({ value });
+      return state.tr.replaceRangeWith(start, end, node);
+    },
+  );
+  ctx.update(inputRulesCtx, (rules) => rules.filter((item) => (item as InputRule & { match: RegExp }).match.source !== String.raw`\$([^\s$](?:[^$]*[^\s$])?)\$$`));
+  return rule;
+});
 
 const emptyHeadingBackspace = $prose(() => keymap({
   Backspace: (state, dispatch) => {
@@ -57,8 +72,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
   onSelectionChangeRef.current = onSelectionChange;
   useImperativeHandle(ref, () => ({
     getMarkdown: () => crepeRef.current?.getMarkdown(),
-    applyMarkdown: (markdown) => {
-      crepeRef.current?.editor.action(insert(normalizeMathDelimiters(markdown)));
+    replaceDocument: (markdown) => {
+      crepeRef.current?.editor.action(replaceAll(normalizeMathDelimiters(markdown)));
+      return crepeRef.current?.getMarkdown();
     },
   }), []);
 
@@ -73,6 +89,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
       featureConfigs: {
         [Crepe.Feature.ImageBlock]: { onUpload: uploadImage },
         [Crepe.Feature.Placeholder]: { text: "开始书写，使用 / 插入内容", mode: "block" },
+        [Crepe.Feature.BlockEdit]: { advancedGroup: { label: "高级", math: { label: "数学公式" } } },
         [Crepe.Feature.Latex]: { katexOptions: { throwOnError: false } },
       },
     });
@@ -105,7 +122,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
       },
     }));
     crepeRef.current = crepe;
-    crepe.editor.use(emptyHeadingBackspace).use(selectionTracker);
+    crepe.editor.use(emptyHeadingBackspace).use(selectionTracker).use(inlineMathInput);
     crepe.on((listener) => {
       listener.markdownUpdated((_ctx, markdown, previous) => {
         if (markdown !== previous) onChangeRef.current(markdown);
