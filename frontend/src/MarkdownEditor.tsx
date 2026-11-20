@@ -1,5 +1,6 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ChangeEvent, type ClipboardEvent } from "react";
 import { Crepe } from "@milkdown/crepe";
+import { Video } from "lucide-react";
 import { editorViewCtx, inputRulesCtx, schemaCtx, serializerCtx } from "@milkdown/kit/core";
 import { InputRule } from "@milkdown/kit/prose/inputrules";
 import { keymap } from "@milkdown/kit/prose/keymap";
@@ -7,6 +8,7 @@ import { Plugin, TextSelection } from "@milkdown/kit/prose/state";
 import { $inputRule, $prose, insert, replaceAll } from "@milkdown/kit/utils";
 import { API_URL, authorizedFetch } from "./api";
 import { normalizeMathDelimiters } from "./mathDelimiters";
+import { remarkVideoPlugin, videoMarkdown, videoSchema } from "./video";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
 
@@ -23,11 +25,14 @@ export interface MarkdownEditorHandle {
   replaceDocument: (markdown: string) => string | undefined;
 }
 
-async function uploadImage(file: File) {
+async function uploadAsset(file: File) {
   const body = new FormData();
   body.append("file", file);
   const response = await authorizedFetch(`${API_URL}/assets`, { method: "POST", body });
-  if (!response.ok) throw new Error("图片上传失败");
+  if (!response.ok) {
+    const result = await response.json().catch(() => null) as { detail?: string } | null;
+    throw new Error(result?.detail || "附件上传失败");
+  }
   return (await response.json() as { url: string }).url;
 }
 
@@ -64,7 +69,9 @@ const emptyHeadingBackspace = $prose(() => keymap({
 
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function MarkdownEditor({ value, onChange, onError, onSelectionChange }, ref) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const crepeRef = useRef<Crepe>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const onChangeRef = useRef(onChange);
   const onErrorRef = useRef(onError);
   const onSelectionChangeRef = useRef(onSelectionChange);
@@ -82,6 +89,36 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
     },
   }), []);
 
+  async function handleVideoUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !crepeRef.current) return;
+    if (file.size > 200 * 1024 * 1024) {
+      onErrorRef.current("视频不能超过 200 MB");
+      return;
+    }
+    setUploadingVideo(true);
+    onErrorRef.current("");
+    try {
+      const url = await uploadAsset(file);
+      crepeRef.current?.editor.action(insert(videoMarkdown(url)));
+    } catch (reason) {
+      onErrorRef.current(reason instanceof Error ? reason.message : "视频上传失败");
+    } finally {
+      setUploadingVideo(false);
+    }
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
+    if (event.clipboardData.getData("text/html")) return;
+    const text = event.clipboardData.getData("text/plain");
+    if (!text) return;
+    const normalized = normalizeMathDelimiters(text);
+    if (normalized === text || !crepeRef.current) return;
+    event.preventDefault();
+    crepeRef.current.editor.action(insert(normalized));
+  }
+
   useEffect(() => {
     if (!rootRef.current) return;
     const crepe = new Crepe({
@@ -91,7 +128,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
         [Crepe.Feature.TopBar]: true,
       },
       featureConfigs: {
-        [Crepe.Feature.ImageBlock]: { onUpload: uploadImage },
+        [Crepe.Feature.ImageBlock]: { onUpload: uploadAsset },
         [Crepe.Feature.Placeholder]: { text: "开始书写，使用 / 插入内容", mode: "block" },
         [Crepe.Feature.BlockEdit]: { advancedGroup: { label: "高级", math: { label: "数学公式" } } },
         [Crepe.Feature.Latex]: { katexOptions: { throwOnError: false } },
@@ -126,7 +163,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
       },
     }));
     crepeRef.current = crepe;
-    crepe.editor.use(emptyHeadingBackspace).use(selectionTracker).use(inlineMathInput);
+    crepe.editor.use(remarkVideoPlugin).use(videoSchema).use(emptyHeadingBackspace).use(selectionTracker).use(inlineMathInput);
     crepe.on((listener) => {
       listener.markdownUpdated((_ctx, markdown, previous) => {
         if (markdown !== previous) onChangeRef.current(markdown);
@@ -139,5 +176,21 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
     };
   }, []);
 
-  return <div className="milkdown-editor" ref={rootRef} />;
+  return (
+    <>
+      <div className="editor-media-actions">
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={uploadingVideo}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => videoInputRef.current?.click()}
+        >
+          <Video size={15} />{uploadingVideo ? "视频上传中…" : "上传 MP4 视频"}
+        </button>
+        <input ref={videoInputRef} type="file" accept="video/mp4,.mp4" onChange={(event) => void handleVideoUpload(event)} hidden />
+      </div>
+      <div className="milkdown-editor" ref={rootRef} onPasteCapture={handlePaste} />
+    </>
+  );
 });

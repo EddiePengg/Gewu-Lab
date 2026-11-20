@@ -10,16 +10,19 @@ from ..config import settings
 
 
 router = APIRouter(prefix="/assets", tags=["assets"])
-EXTENSIONS = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}
-ASSET_NAME = re.compile(r"^[0-9a-f]{32}\.(png|jpg|webp)$")
+EXTENSIONS = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "video/mp4": ".mp4"}
+ASSET_NAME = re.compile(r"^[0-9a-f]{32}\.(png|jpg|webp|mp4)$")
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
+MAX_VIDEO_SIZE = 200 * 1024 * 1024
 
 
 @router.post("", status_code=201, dependencies=[Depends(require_bearer)])
 async def upload_asset(file: UploadFile = File(...)):
     extension = EXTENSIONS.get(file.content_type or "")
     if not extension:
-        raise HTTPException(status_code=415, detail="仅支持 PNG、JPEG 和 WebP 图片")
+        raise HTTPException(status_code=415, detail="仅支持 PNG、JPEG、WebP 图片和 MP4 视频")
+    max_size = MAX_VIDEO_SIZE if extension == ".mp4" else MAX_IMAGE_SIZE
+    size_limit_message = "视频不能超过 200 MB" if extension == ".mp4" else "图片不能超过 10 MB"
     directory = Path(settings.asset_dir)
     directory.mkdir(parents=True, exist_ok=True)
     name = f"{uuid4().hex}{extension}"
@@ -29,8 +32,8 @@ async def upload_asset(file: UploadFile = File(...)):
         with target.open("wb") as output:
             while chunk := await file.read(1024 * 1024):
                 size += len(chunk)
-                if size > MAX_IMAGE_SIZE:
-                    raise HTTPException(status_code=413, detail="图片不能超过 10 MB")
+                if size > max_size:
+                    raise HTTPException(status_code=413, detail=size_limit_message)
                 output.write(chunk)
     except Exception:
         target.unlink(missing_ok=True)

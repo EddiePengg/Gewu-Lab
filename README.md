@@ -6,12 +6,12 @@
 
 - 多 Workspace 管理
 - 单一 Markdown 卡片模型，不区分知识点与题目
-- Markdown 与 LaTeX 公式渲染
-- Milkdown Crepe 所见即所得编辑器
+- Markdown、LaTeX 公式与 MP4 视频渲染
+- Milkdown Crepe 所见即所得编辑器，支持上传并在光标处插入 MP4 视频
 - AI 副驾驶侧栏：询问与 Agent 双模式、原始 Markdown 复制、光标插入与选区替换、文档直接修改与单次撤销
 - AI 对话框支持粘贴或拖入图片，识别为 Markdown/LaTeX
 - 标签、搜索、创建时间、修改时间和上次查看时间
-- 图片附件持久化
+- 图片与 MP4 视频附件持久化，视频最大 200 MB
 - 网页、AI 与外部程序共用的 Bearer Token API 与 OpenAPI 文档
 
 ## 技术栈
@@ -94,7 +94,7 @@ npm run dev
 
 ## API
 
-网页、AI 和外部客户端统一使用 `/api`，并通过 `Authorization: Bearer <GEWU_API_TOKEN>` 鉴权。健康检查、API 文档和已上传图片的读取不需要 Token。
+网页、AI 和外部客户端统一使用 `/api`，并通过 `Authorization: Bearer <GEWU_API_TOKEN>` 鉴权。健康检查、API 文档和已上传附件的读取不需要 Token。
 
 ```bash
 curl http://localhost:8000/api/workspaces \
@@ -121,9 +121,9 @@ API 文档位于 `/api/docs`，OpenAPI JSON 位于 `/api/openapi.json`。
 ## 数据与文件
 
 - 本机 SQLite 数据：`instance/gewu.db`
-- 本机图片：`instance/assets/`
+- 本机图片与视频：`instance/assets/`
 - Docker PostgreSQL 数据：`postgres_data` volume
-- Docker 图片：`asset_data` volume
+- Docker 图片与视频：`asset_data` volume
 
 ## 项目结构
 
