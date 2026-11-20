@@ -1,13 +1,14 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ChangeEvent, type ClipboardEvent } from "react";
 import { Crepe } from "@milkdown/crepe";
-import { Video } from "lucide-react";
-import { editorViewCtx, inputRulesCtx, schemaCtx, serializerCtx } from "@milkdown/kit/core";
+import { commandsCtx, editorViewCtx, inputRulesCtx, schemaCtx, serializerCtx } from "@milkdown/kit/core";
+import { clearTextInCurrentBlockCommand } from "@milkdown/kit/preset/commonmark";
 import { InputRule } from "@milkdown/kit/prose/inputrules";
 import { keymap } from "@milkdown/kit/prose/keymap";
 import { Plugin, TextSelection } from "@milkdown/kit/prose/state";
 import { $inputRule, $prose, insert, replaceAll } from "@milkdown/kit/utils";
 import { API_URL, authorizedFetch } from "./api";
 import { normalizeMathDelimiters } from "./mathDelimiters";
+import { useMathSourceHidden } from "./mathVisibility";
 import { remarkVideoPlugin, videoMarkdown, videoSchema } from "./video";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame.css";
@@ -24,6 +25,8 @@ export interface MarkdownEditorHandle {
   insertMarkdown: (markdown: string) => void;
   replaceDocument: (markdown: string) => string | undefined;
 }
+
+const videoIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.2 3.5a.5.5 0 0 0 .8-.4V7.9a.5.5 0 0 0-.8-.4L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>`;
 
 async function uploadAsset(file: File) {
   const body = new FormData();
@@ -50,18 +53,18 @@ const inlineMathInput = $inputRule((ctx) => {
   return rule;
 });
 
-const emptyHeadingBackspace = $prose(() => keymap({
+const headingBackspace = $prose(() => keymap({
   Backspace: (state, dispatch) => {
     const { selection } = state;
     if (!(selection instanceof TextSelection) || !selection.empty) return false;
     const { $from } = selection;
-    if ($from.parentOffset !== 0 || $from.parent.type.name !== "heading" || $from.parent.content.size !== 0) return false;
+    if ($from.parentOffset !== 0 || $from.parent.type.name !== "heading") return false;
 
     const from = $from.before();
-    if ($from.depth === 1 && state.doc.childCount === 1) {
-      dispatch?.(state.tr.setNodeMarkup(from, state.schema.nodes.paragraph));
-    } else {
+    if ($from.parent.content.size === 0 && !($from.depth === 1 && state.doc.childCount === 1)) {
       dispatch?.(state.tr.delete(from, $from.after()));
+    } else {
+      dispatch?.(state.tr.setNodeMarkup(from, state.schema.nodes.paragraph));
     }
     return true;
   },
@@ -72,6 +75,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
   const videoInputRef = useRef<HTMLInputElement>(null);
   const crepeRef = useRef<Crepe>(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const mathSourceHidden = useMathSourceHidden();
   const onChangeRef = useRef(onChange);
   const onErrorRef = useRef(onError);
   const onSelectionChangeRef = useRef(onSelectionChange);
@@ -130,7 +134,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
       featureConfigs: {
         [Crepe.Feature.ImageBlock]: { onUpload: uploadAsset },
         [Crepe.Feature.Placeholder]: { text: "开始书写，使用 / 插入内容", mode: "block" },
-        [Crepe.Feature.BlockEdit]: { advancedGroup: { label: "高级", math: { label: "数学公式" } } },
+        [Crepe.Feature.BlockEdit]: {
+          advancedGroup: { label: "高级", math: { label: "数学公式" } },
+          buildMenu: (builder) => {
+            builder.getGroup("advanced").addItem("video", {
+              label: "视频",
+              icon: videoIcon,
+              onRun: (ctx) => {
+                ctx.get(commandsCtx).call(clearTextInCurrentBlockCommand.key);
+                videoInputRef.current?.click();
+              },
+            });
+          },
+        },
         [Crepe.Feature.Latex]: { katexOptions: { throwOnError: false } },
       },
     });
@@ -163,7 +179,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
       },
     }));
     crepeRef.current = crepe;
-    crepe.editor.use(remarkVideoPlugin).use(videoSchema).use(emptyHeadingBackspace).use(selectionTracker).use(inlineMathInput);
+    crepe.editor.use(remarkVideoPlugin).use(videoSchema).use(headingBackspace).use(selectionTracker).use(inlineMathInput);
     crepe.on((listener) => {
       listener.markdownUpdated((_ctx, markdown, previous) => {
         if (markdown !== previous) onChangeRef.current(markdown);
@@ -178,19 +194,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(function M
 
   return (
     <>
-      <div className="editor-media-actions">
-        <button
-          type="button"
-          className="secondary-button"
-          disabled={uploadingVideo}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => videoInputRef.current?.click()}
-        >
-          <Video size={15} />{uploadingVideo ? "视频上传中…" : "上传 MP4 视频"}
-        </button>
-        <input ref={videoInputRef} type="file" accept="video/mp4,.mp4" onChange={(event) => void handleVideoUpload(event)} hidden />
-      </div>
-      <div className="milkdown-editor" ref={rootRef} onPasteCapture={handlePaste} />
+      {uploadingVideo && <div className="editor-media-status" role="status">视频上传中…</div>}
+      <input ref={videoInputRef} type="file" accept="video/mp4,.mp4" onChange={(event) => void handleVideoUpload(event)} hidden />
+      <div className={`milkdown-editor${mathSourceHidden ? " math-source-hidden" : ""}`} ref={rootRef} onPasteCapture={handlePaste} />
     </>
   );
 });

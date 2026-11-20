@@ -5,6 +5,7 @@ import { api } from "../api";
 import { useApp } from "../App";
 import { CopilotSidebar } from "../CopilotSidebar";
 import { MarkdownEditor, type MarkdownEditorHandle } from "../MarkdownEditor";
+import { MathVisibilityToggle } from "../MathVisibilityToggle";
 import { normalizeMathDelimiters } from "../mathDelimiters";
 import type { Card } from "../types";
 import { UnsavedChangesGuard } from "../UnsavedChangesGuard";
@@ -98,6 +99,7 @@ export function CardPage() {
         <Link to={`/w/${card.workspace_id}`} className="back-link"><ArrowLeft size={16} />{workspace?.name || "返回 Workspace"}</Link>
         <div className="editor-mode"><SquarePen size={16} />编辑卡片</div>
         <div className="editor-actions">
+          <MathVisibilityToggle />
           <button type="button" className="secondary-button danger" onClick={() => void remove()}><Trash2 size={15} />删除</button>
           <button className="primary-button" disabled={saving || !content.trim() || content.trim() === "#"}><Check size={16} />{saving ? "保存中…" : "保存"}</button>
         </div>

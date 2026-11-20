@@ -5,6 +5,7 @@ import { api } from "../api";
 import { useApp } from "../App";
 import { CopilotSidebar } from "../CopilotSidebar";
 import { MarkdownEditor, type MarkdownEditorHandle } from "../MarkdownEditor";
+import { MathVisibilityToggle } from "../MathVisibilityToggle";
 import { normalizeMathDelimiters } from "../mathDelimiters";
 import { UnsavedChangesGuard } from "../UnsavedChangesGuard";
 import { parseTags } from "../utils";
@@ -90,7 +91,10 @@ export function CardEditor() {
       <header className="editor-topbar">
         <Link to={backPath} className="back-link"><ArrowLeft size={16} />取消</Link>
         <div className="editor-mode"><SquarePen size={16} />{editing ? "编辑卡片" : "新建卡片"}</div>
-        <button className="primary-button" disabled={saving || !content.trim() || content.trim() === "#"}><Check size={16} />{saving ? "保存中…" : "保存"}</button>
+        <div className="editor-actions">
+          <MathVisibilityToggle />
+          <button className="primary-button" disabled={saving || !content.trim() || content.trim() === "#"}><Check size={16} />{saving ? "保存中…" : "保存"}</button>
+        </div>
       </header>
       {error && <div className="inline-error editor-error">{error}</div>}
       <div className="editor-body">

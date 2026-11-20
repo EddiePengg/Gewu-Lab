@@ -7,7 +7,8 @@
 - 多 Workspace 管理
 - 单一 Markdown 卡片模型，不区分知识点与题目
 - Markdown、LaTeX 公式与 MP4 视频渲染
-- Milkdown Crepe 所见即所得编辑器，支持上传并在光标处插入 MP4 视频
+- Milkdown Crepe 所见即所得编辑器，支持通过 `/` 组件菜单上传并插入 MP4 视频
+- 独立公式源码一键隐藏或展开，并在本地记住显示偏好
 - AI 副驾驶侧栏：询问与 Agent 双模式、原始 Markdown 复制、光标插入与选区替换、文档直接修改与单次撤销
 - AI 对话框支持粘贴或拖入图片，识别为 Markdown/LaTeX
 - 标签、搜索、创建时间、修改时间和上次查看时间
